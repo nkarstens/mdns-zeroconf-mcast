@@ -1,4 +1,4 @@
-Contains proof-of-concept code for the [draft-karstens-pim-ipv6-zeroconf-assignment](https://datatracker.ietf.org/doc/draft-karstens-pim-ipv6-zeroconf-assignment/) Internet Draft.
+Contains proof-of-concept code for the [draft-ietf-pim-ipv6-zeroconf-assignment](https://datatracker.ietf.org/doc/draft-ietf-pim-ipv6-zeroconf-assignment/) Internet Draft.
 
 Usage:
 
