@@ -16,12 +16,11 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-static const uint32_t ttl = 60 * 60;
-
 static char* app_name = NULL;
 static char* ptr_name;
 static char* ptr_rdata;
 static size_t ptr_rdata_sz;
+static uint32_t ttl = 60 * 60;
 static uint32_t intf_scope_id;
 static AvahiSimplePoll* simple_poll = NULL;
 static AvahiRecordBrowser* browser = NULL;
@@ -62,12 +61,16 @@ static uint8_t find_ipv6_ll_addr(const char* intf,
 
 static void print_help(void) {
     printf(
+        // clang-format off
         "mdns-zeroconf-mcast [OPTION]\n"
         "Options:\n"
         "  -i --intf=interface The network interface to use\n"
         "  -n --name=name      The name of the application\n"
         "  -g --groupid=id     32-bit group ID in hexadecimal\n"
-        "  -h --help           Prints help message\n");
+        "  -t --ttl=ttl        Record TTL in seconds (optional, defaults to 1 hour)\n"
+        "  -h --help           Prints help message\n"
+        // clang-format on
+    );
 }
 
 static void entry_group_callback(AvahiEntryGroup* g,
@@ -175,6 +178,7 @@ int main(int argc, char* argv[]) {
         {"intf", required_argument, 0, 'i'},
         {"name", required_argument, 0, 'n'},
         {"groupid", required_argument, 0, 'g'},
+        {"ttl", required_argument, 0, 't'},
         {"help", no_argument, 0, 'h'},
         {0, 0, 0, 0}};
 
@@ -189,7 +193,7 @@ int main(int argc, char* argv[]) {
     AvahiClient* avahi;
     int error;
 
-    while ((opt = getopt_long(argc, argv, "i:n:g:h", long_options, NULL)) !=
+    while ((opt = getopt_long(argc, argv, "i:n:g:t:h", long_options, NULL)) !=
            -1) {
         switch (opt) {
             case 'i':
@@ -202,6 +206,14 @@ int main(int argc, char* argv[]) {
 
             case 'g':
                 if (sscanf(optarg, "%x", &group_id) == 1) group_id_set = 1;
+                break;
+
+            case 't':
+                if (sscanf(optarg, "%" PRIu32, &ttl) != 1) {
+                    printf("TTL value is not correctly formatted: '%s'\n",
+                           optarg);
+                    exit(EXIT_FAILURE);
+                }
                 break;
 
             case 'h':
