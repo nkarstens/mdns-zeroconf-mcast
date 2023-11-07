@@ -14,15 +14,15 @@ Options:
 Use `iptables` to simulate a network partition:
 
 ```
-iptables  -I INPUT  -p udp --dport mdns -j DROP
-iptables  -I OUTPUT -p udp --dport mdns -j DROP
-ip6tables -I INPUT  -p udp --dport mdns -j DROP
+iptables  -I INPUT  -p udp --dport mdns -j DROP && \
+iptables  -I OUTPUT -p udp --dport mdns -j DROP && \
+ip6tables -I INPUT  -p udp --dport mdns -j DROP && \
 ip6tables -I OUTPUT -p udp --dport mdns -j DROP
 ```
 
 and to repair the partition:
 
 ```
-iptables  --flush
+iptables  --flush && \
 ip6tables --flush
 ```
