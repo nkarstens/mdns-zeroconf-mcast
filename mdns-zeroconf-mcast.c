@@ -14,6 +14,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
+#include <time.h>
 #include <unistd.h>
 
 static char* app_name = NULL;
@@ -73,21 +74,35 @@ static void print_help(void) {
     );
 }
 
+static void print_timed_message(const char* msg) {
+    time_t time_val = time(NULL);
+    struct tm* time_tm = localtime(&time_val);
+
+    printf("[%u-%02u-%02u %02u:%02u:%02u] %s\n",
+           time_tm->tm_year + 1900,
+           time_tm->tm_mon + 1,
+           time_tm->tm_mday,
+           time_tm->tm_hour,
+           time_tm->tm_min,
+           time_tm->tm_sec,
+           msg);
+}
+
 static void entry_group_callback(AvahiEntryGroup* g,
                                  AvahiEntryGroupState state,
                                  void* userdata) {
     switch (state) {
         case AVAHI_ENTRY_GROUP_ESTABLISHED:
-            printf("Registration successful\n");
+            print_timed_message("Registration successful");
             break;
 
         case AVAHI_ENTRY_GROUP_COLLISION:
-            printf("Encountered collision, exiting\n");
+            print_timed_message("Encountered collision, exiting");
             avahi_simple_poll_quit(simple_poll);
             break;
 
         case AVAHI_ENTRY_GROUP_FAILURE:
-            printf("Encountered registration failure, exiting\n");
+            print_timed_message("Encountered registration failure, exiting");
             exit(EXIT_FAILURE);
     }
 }
