@@ -23,6 +23,8 @@ static char* ptr_rdata;
 static size_t ptr_rdata_sz;
 static uint32_t ttl = 60 * 60;
 static uint32_t intf_scope_id;
+static AvahiPublishFlags publish_flags =
+    AVAHI_PUBLISH_UNIQUE | AVAHI_PUBLISH_USE_MULTICAST;
 static AvahiSimplePoll* simple_poll = NULL;
 static AvahiRecordBrowser* browser = NULL;
 
@@ -69,6 +71,7 @@ static void print_help(void) {
         "  -n --name=name      The name of the application\n"
         "  -g --groupid=id     32-bit group ID in hexadecimal\n"
         "  -t --ttl=ttl        Record TTL in seconds (optional, defaults to 1 hour)\n"
+        "  -s --skip-probe     Skip probing before advertising the record\n"
         "  -h --help           Prints help message\n"
         // clang-format on
     );
@@ -113,17 +116,16 @@ static void register_record(AvahiClient* c) {
 
     group = avahi_entry_group_new(c, entry_group_callback, NULL);
 
-    error = avahi_entry_group_add_record(
-        group,
-        intf_scope_id,
-        AVAHI_PROTO_UNSPEC,
-        AVAHI_PUBLISH_UNIQUE | AVAHI_PUBLISH_USE_MULTICAST,
-        ptr_name,
-        AVAHI_DNS_CLASS_IN,
-        AVAHI_DNS_TYPE_PTR,
-        ttl,
-        ptr_rdata,
-        ptr_rdata_sz);
+    error = avahi_entry_group_add_record(group,
+                                         intf_scope_id,
+                                         AVAHI_PROTO_UNSPEC,
+                                         publish_flags,
+                                         ptr_name,
+                                         AVAHI_DNS_CLASS_IN,
+                                         AVAHI_DNS_TYPE_PTR,
+                                         ttl,
+                                         ptr_rdata,
+                                         ptr_rdata_sz);
     if (error) {
         printf("Error adding record: %s\n", avahi_strerror(error));
         exit(EXIT_FAILURE);
@@ -194,6 +196,7 @@ int main(int argc, char* argv[]) {
         {"name", required_argument, 0, 'n'},
         {"groupid", required_argument, 0, 'g'},
         {"ttl", required_argument, 0, 't'},
+        {"skip-probe", no_argument, 0, 's'},
         {"help", no_argument, 0, 'h'},
         {0, 0, 0, 0}};
 
@@ -208,7 +211,7 @@ int main(int argc, char* argv[]) {
     AvahiClient* avahi;
     int error;
 
-    while ((opt = getopt_long(argc, argv, "i:n:g:t:h", long_options, NULL)) !=
+    while ((opt = getopt_long(argc, argv, "i:n:g:t:sh", long_options, NULL)) !=
            -1) {
         switch (opt) {
             case 'i':
@@ -229,6 +232,10 @@ int main(int argc, char* argv[]) {
                            optarg);
                     exit(EXIT_FAILURE);
                 }
+                break;
+
+            case 's':
+                publish_flags |= AVAHI_PUBLISH_NO_PROBE;
                 break;
 
             case 'h':
