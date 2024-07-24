@@ -17,6 +17,8 @@
 #include <time.h>
 #include <unistd.h>
 
+static const char * const veto_name = "veto";
+
 static char* app_name = NULL;
 static char* ptr_name;
 static char* ptr_rdata;
@@ -69,9 +71,9 @@ static void print_help(void) {
         "Options:\n"
         "  -i --intf=interface The network interface to use\n"
         "  -n --name=name      The name of the application\n"
+        "                      (use \"veto\" to publish a veto)\n"
         "  -g --groupid=id     32-bit group ID in hexadecimal\n"
         "  -t --ttl=ttl        Record TTL in seconds (optional, defaults to 1 hour)\n"
-        "  -s --skip-probe     Skip probing before advertising the record\n"
         "  -h --help           Prints help message\n"
         // clang-format on
     );
@@ -157,14 +159,22 @@ static void client_callback(AvahiClient* c,
             host_name = avahi_client_get_host_name(c);
             domain_name = avahi_client_get_domain_name(c);
 
-            asprintf(&ptr_rdata,
-                     "%c%s%c%s%c%s",
-                     (char)strlen(app_name),
-                     app_name,
-                     (char)strlen(host_name),
-                     host_name,
-                     (char)strlen(domain_name),
-                     domain_name);
+            if (strcmp(veto_name, app_name) == 0) {
+                asprintf(&ptr_rdata,
+                         "%c%s",
+                         (char)strlen(app_name),
+                         app_name);
+            } else {
+                asprintf(&ptr_rdata,
+                        "%c%s%c%s%c%s",
+                        (char)strlen(app_name),
+                        app_name,
+                        (char)strlen(host_name),
+                        host_name,
+                        (char)strlen(domain_name),
+                        domain_name);
+            }
+
             ptr_rdata_sz = strlen(ptr_rdata) + 1;  // Include null terminator
 
             register_record(c);
@@ -196,7 +206,6 @@ int main(int argc, char* argv[]) {
         {"name", required_argument, 0, 'n'},
         {"groupid", required_argument, 0, 'g'},
         {"ttl", required_argument, 0, 't'},
-        {"skip-probe", no_argument, 0, 's'},
         {"help", no_argument, 0, 'h'},
         {0, 0, 0, 0}};
 
@@ -211,7 +220,7 @@ int main(int argc, char* argv[]) {
     AvahiClient* avahi;
     int error;
 
-    while ((opt = getopt_long(argc, argv, "i:n:g:t:sh", long_options, NULL)) !=
+    while ((opt = getopt_long(argc, argv, "i:n:g:t:h", long_options, NULL)) !=
            -1) {
         switch (opt) {
             case 'i':
@@ -234,10 +243,6 @@ int main(int argc, char* argv[]) {
                 }
                 break;
 
-            case 's':
-                publish_flags |= AVAHI_PUBLISH_NO_PROBE;
-                break;
-
             case 'h':
                 print_help();
                 exit(EXIT_SUCCESS);
@@ -252,6 +257,9 @@ int main(int argc, char* argv[]) {
         print_help();
         exit(EXIT_FAILURE);
     }
+
+    if (strcmp(veto_name, app_name) == 0)
+        publish_flags |= AVAHI_PUBLISH_NO_PROBE;
 
     if (!find_ipv6_ll_addr(intf, &addr_intf, &intf_scope_id)) {
         printf(
