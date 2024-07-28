@@ -93,12 +93,39 @@ static void print_timed_message(const char* msg) {
            msg);
 }
 
+static void record_browser_callback(AvahiRecordBrowser* b,
+                                    AvahiIfIndex interface,
+                                    AvahiProtocol protocol,
+                                    AvahiBrowserEvent event,
+                                    const char* name,
+                                    uint16_t clazz,
+                                    uint16_t type,
+                                    const void* rdata,
+                                    size_t size,
+                                    AvahiLookupResultFlags flags,
+                                    void* userdata) {}
+
 static void entry_group_callback(AvahiEntryGroup* g,
                                  AvahiEntryGroupState state,
                                  void* userdata) {
     switch (state) {
         case AVAHI_ENTRY_GROUP_ESTABLISHED:
             print_timed_message("Registration successful");
+
+            // The network is probed for existing records when first
+            // publishing, but will not detect duplicates caused by a
+            // network partition without a continuous query. If found,
+            // then AVAHI_ENTRY_GROUP_COLLISION will be sent to the
+            // entry group callback.
+            browser = avahi_record_browser_new((AvahiClient*)userdata,
+                                               intf_scope_id,
+                                               AVAHI_PROTO_UNSPEC,
+                                               ptr_name,
+                                               AVAHI_DNS_CLASS_IN,
+                                               AVAHI_DNS_TYPE_PTR,
+                                               AVAHI_LOOKUP_USE_MULTICAST,
+                                               record_browser_callback,
+                                               NULL);
             break;
 
         case AVAHI_ENTRY_GROUP_COLLISION:
@@ -116,7 +143,7 @@ static void register_record(AvahiClient* c) {
     AvahiEntryGroup* group;
     int error;
 
-    group = avahi_entry_group_new(c, entry_group_callback, NULL);
+    group = avahi_entry_group_new(c, entry_group_callback, c);
 
     error = avahi_entry_group_add_record(group,
                                          intf_scope_id,
@@ -135,18 +162,6 @@ static void register_record(AvahiClient* c) {
 
     avahi_entry_group_commit(group);
 }
-
-static void record_browser_callback(AvahiRecordBrowser* b,
-                                    AvahiIfIndex interface,
-                                    AvahiProtocol protocol,
-                                    AvahiBrowserEvent event,
-                                    const char* name,
-                                    uint16_t clazz,
-                                    uint16_t type,
-                                    const void* rdata,
-                                    size_t size,
-                                    AvahiLookupResultFlags flags,
-                                    void* userdata) {}
 
 static void client_callback(AvahiClient* c,
                             AvahiClientState state,
@@ -179,18 +194,6 @@ static void client_callback(AvahiClient* c,
 
             register_record(c);
 
-            // Start continuous query to receive alerts for duplicate records
-            // If a duplicate is found, then AVAHI_ENTRY_GROUP_COLLISION will
-            // be sent to the entry group callback
-            browser = avahi_record_browser_new(c,
-                                               intf_scope_id,
-                                               AVAHI_PROTO_UNSPEC,
-                                               ptr_name,
-                                               AVAHI_DNS_CLASS_IN,
-                                               AVAHI_DNS_TYPE_PTR,
-                                               AVAHI_LOOKUP_USE_MULTICAST,
-                                               record_browser_callback,
-                                               NULL);
             break;
 
         case AVAHI_CLIENT_FAILURE:
