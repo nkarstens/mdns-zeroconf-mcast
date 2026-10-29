@@ -24,7 +24,7 @@ static char* app_name = NULL;
 static char* ptr_name;
 static char* ptr_rdata;
 static size_t ptr_rdata_sz;
-static uint32_t ttl = 60 * 60;
+static uint32_t ttl = 120;
 static bool veto = false;
 static uint32_t intf_scope_id;
 static AvahiSimplePoll* simple_poll = NULL;
@@ -72,7 +72,7 @@ static void print_help(void) {
         "  -i --intf=interface The network interface to use\n"
         "  -n --name=name      The name of the application\n"
         "  -g --groupid=id     32-bit group ID in hexadecimal\n"
-        "  -t --ttl=ttl        Record TTL in seconds (optional, defaults to 1 hour)\n"
+        "  -t --ttl=ttl        Record TTL in seconds (optional, defaults to 120 seconds)\n"
         "  -v --veto           Publish a veto record (optional)\n"
         "  -h --help           Prints help message\n"
         // clang-format on
