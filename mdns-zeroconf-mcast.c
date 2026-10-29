@@ -94,10 +94,14 @@ static void print_help(void) {
         "mdns-zeroconf-mcast [OPTION]\n"
         "Options:\n"
         "  -i --intf=interface The network interface to use\n"
-        "  -n --name=name      The name of the application\n"
+        "  -n --name=name      The name of the application (required,\n"
+        "                      unless publishing a veto record)\n"
         "  -g --groupid=id     32-bit group ID in hexadecimal\n"
         "  -t --ttl=ttl        Record TTL in seconds (optional, defaults to 120 seconds)\n"
         "  -v --veto           Publish a veto record (optional)\n"
+        "                      If an application name is not specified, then the\n"
+        "                      network will be scanned for the application name\n"
+        "                      to use for the veto record.\n"
         "  -h --help           Prints help message\n"
         // clang-format on
     );
@@ -191,13 +195,55 @@ static void register_record(AvahiClient* c) {
     avahi_entry_group_commit(group);
 }
 
+static void record_browser_application_clbk(AvahiRecordBrowser* b,
+                                            AvahiIfIndex interface,
+                                            AvahiProtocol protocol,
+                                            AvahiBrowserEvent event,
+                                            const char* name,
+                                            uint16_t clazz,
+                                            uint16_t type,
+                                            const void* rdata,
+                                            size_t size,
+                                            AvahiLookupResultFlags flags,
+                                            void* userdata) {
+    AvahiClient* c = (AvahiClient*)userdata;
+
+    if (event != AVAHI_BROWSER_NEW) {
+        return;
+    }
+
+    if (app_name != NULL) {
+        return;
+    }
+
+    print_timed_message("Found application PTR record");
+
+    asprintf(&app_name, "%.*s", *(const unsigned char*)rdata, (const char*)rdata + 1);
+
+    generate_rdata(c);
+    register_record(c);
+}
+
 static void client_callback(AvahiClient* c,
                             AvahiClientState state,
                             void* userdata) {
     switch (state) {
         case AVAHI_CLIENT_S_RUNNING:
-            generate_rdata(c);
-            register_record(c);
+            if (veto && !app_name) {
+                print_timed_message("Querying application PTR record");
+                browser = avahi_record_browser_new(c,
+                                                   intf_scope_id,
+                                                   AVAHI_PROTO_UNSPEC,
+                                                   ptr_name,
+                                                   AVAHI_DNS_CLASS_IN,
+                                                   AVAHI_DNS_TYPE_PTR,
+                                                   AVAHI_LOOKUP_USE_MULTICAST,
+                                                   record_browser_application_clbk,
+                                                   c);
+            } else {
+                generate_rdata(c);
+                register_record(c);
+            }
 
             break;
 
@@ -266,7 +312,12 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    if (!intf || !app_name || !group_id_set) {
+    if (!intf || !group_id_set) {
+        print_help();
+        exit(EXIT_FAILURE);
+    }
+
+    if (!app_name && !veto) {
         print_help();
         exit(EXIT_FAILURE);
     }
