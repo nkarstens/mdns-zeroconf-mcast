@@ -117,17 +117,17 @@ static void print_timed_message(const char* msg) {
            msg);
 }
 
-static void record_browser_callback(AvahiRecordBrowser* b,
-                                    AvahiIfIndex interface,
-                                    AvahiProtocol protocol,
-                                    AvahiBrowserEvent event,
-                                    const char* name,
-                                    uint16_t clazz,
-                                    uint16_t type,
-                                    const void* rdata,
-                                    size_t size,
-                                    AvahiLookupResultFlags flags,
-                                    void* userdata) {}
+static void record_browser_empty_clbk(AvahiRecordBrowser* b,
+                                      AvahiIfIndex interface,
+                                      AvahiProtocol protocol,
+                                      AvahiBrowserEvent event,
+                                      const char* name,
+                                      uint16_t clazz,
+                                      uint16_t type,
+                                      const void* rdata,
+                                      size_t size,
+                                      AvahiLookupResultFlags flags,
+                                      void* userdata) {}
 
 static void entry_group_callback(AvahiEntryGroup* g,
                                  AvahiEntryGroupState state,
@@ -148,7 +148,7 @@ static void entry_group_callback(AvahiEntryGroup* g,
                                                AVAHI_DNS_CLASS_IN,
                                                AVAHI_DNS_TYPE_PTR,
                                                AVAHI_LOOKUP_USE_MULTICAST,
-                                               record_browser_callback,
+                                               record_browser_empty_clbk,
                                                NULL);
             break;
 
