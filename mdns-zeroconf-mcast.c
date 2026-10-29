@@ -64,6 +64,30 @@ static uint8_t find_ipv6_ll_addr(const char* intf,
     return ret;
 }
 
+static void generate_rdata(AvahiClient* c) {
+    if (veto) {
+        asprintf(&ptr_rdata,
+                 "%c%s-%s",
+                 (char)(strlen(app_name) + 1 + strlen(veto_name)),
+                 app_name,
+                 veto_name);
+    } else {
+        const char* host_name = avahi_client_get_host_name(c);
+        const char* domain_name = avahi_client_get_domain_name(c);
+
+        asprintf(&ptr_rdata,
+                 "%c%s%c%s%c%s",
+                 (char)strlen(app_name),
+                 app_name,
+                 (char)strlen(host_name),
+                 host_name,
+                 (char)strlen(domain_name),
+                 domain_name);
+    }
+
+    ptr_rdata_sz = strlen(ptr_rdata) + 1;  // Include null terminator
+}
+
 static void print_help(void) {
     printf(
         // clang-format off
@@ -172,28 +196,7 @@ static void client_callback(AvahiClient* c,
                             void* userdata) {
     switch (state) {
         case AVAHI_CLIENT_S_RUNNING:
-            if (veto) {
-                asprintf(&ptr_rdata,
-                         "%c%s-%s",
-                         (char)(strlen(app_name) + 1 + strlen(veto_name)),
-                         app_name,
-                         veto_name);
-            } else {
-                const char* host_name = avahi_client_get_host_name(c);
-                const char* domain_name = avahi_client_get_domain_name(c);
-
-                asprintf(&ptr_rdata,
-                         "%c%s%c%s%c%s",
-                         (char)strlen(app_name),
-                         app_name,
-                         (char)strlen(host_name),
-                         host_name,
-                         (char)strlen(domain_name),
-                         domain_name);
-            }
-
-            ptr_rdata_sz = strlen(ptr_rdata) + 1;  // Include null terminator
-
+            generate_rdata(c);
             register_record(c);
 
             break;
